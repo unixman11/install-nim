@@ -1,0 +1,133 @@
+# test install nginx instance manger
+# Ubuntu 20.04.3 LTS
+
+# Install ClickHouse
+https://clickhouse.com/#quick-start
+
+sudo mkdir /etc/ssl/nginx
+sudo cp /tmp/nginx-instance-manager-eval.cer /etc/ssl/nginx/nginx-repo.crt
+sudo cp /tmp/nginx-instance-manager-eval.key /etc/ssl/nginx/nginx-repo.key
+sudo apt-get -y install apt-transport-https lsb-release ca-certificates
+sudo wget https://nginx.org/keys/nginx_signing.key
+sudo apt-key add nginx_signing.key
+printf "deb https://pkgs.nginx.com/nms/ubuntu `lsb_release -cs` nginx-plus\n" | sudo tee /etc/apt/sources.list.d/nms.list
+sudo wget -q -O /etc/apt/apt.conf.d/90pkgs-nginx https://cs.nginx.com/static/files/90pkgs-nginx
+sudo apt-get update
+
+# install nginx instance manager
+sudo apt-get install -y nms-instance-manager
+
+sudo systemctl restart clickhouse-server
+sudo systemctl restart nginx
+sudo systemctl restart nms
+
+sudo systemctl enable nms-core
+sudo systemctl enable nms-dpm
+sudo systemctl enable nms-ingestion
+sudo systemctl enable nms
+
+dpkg -s nms-instance-manager
+
+# update user pass
+/etc/nms/scripts/basic_passwords.sh <username> [password]
+sudo /etc/nms/scripts/basic_passwords.sh admin P@ssw0rd
+
+https://<NGINX-INSTANCE-MANAGER-FQDN>/ui/
+upload NGINX-Instance-Manager.lic to gui
+
+Next step Scan and Install manage agent later.
+https://docs.nginx.com/nginx-instance-manager/getting-started/installation/install-nginx-agent/
+
+# test manage configure
+demo.conf
+server {
+    listen       81;
+    server_name  localhost;
+
+    location / {
+        return 200 'Hello World';
+        add_header Content-Type text/html;
+    }
+}
+
+#######################################################
+# default admin but don't know pass
+# fix by reset the pass
+sudo sh -c "echo -n 'admin:' > /etc/nms/nginx/.htpasswd"
+sudo sh -c "openssl passwd -apr1 >> /etc/nms/nginx/.htpasswd"
+enter your password = P@ssw0rd
+sudo cat /etc/nms/nginx/.htpasswd
+
+
+# note log install nginx instance manager
+NGINX Management Suite package has been successfully installed.
+
+Please follow the next steps to start the software:
+    # Start Clickhouse database server
+    sudo systemctl start clickhouse-server
+
+    # Start NGINX web server
+    sudo systemctl start nginx
+
+    # If NGINX is already running, reload it
+    sudo service nginx reload
+
+    # to ensure the services starts whenever the system boots
+    sudo systemctl enable nms
+
+    sudo systemctl enable nms-core
+    sudo systemctl enable nms-dpm
+    sudo systemctl enable nms-ingestion
+    # Start NGINX Management Suite services
+    sudo systemctl start nms
+
+    # to load the included SELinux policy
+    sudo semodule -n -i /usr/share/selinux/packages/nms.pp
+    sudo /usr/sbin/load_policy
+    sudo restorecon -F -R /usr/bin/nms-core
+    sudo restorecon -F -R /usr/bin/nms-dpm
+    sudo restorecon -F -R /usr/bin/nms-ingestion
+    sudo restorecon -F -R /usr/lib/systemd/system/nms.service
+    sudo restorecon -F -R /usr/lib/systemd/system/nms-core.service
+    sudo restorecon -F -R /usr/lib/systemd/system/nms-dpm.service
+    sudo restorecon -F -R /usr/lib/systemd/system/nms-ingestion.service
+    sudo restorecon -F -R /var/lib/nms/modules/manager.json
+    sudo restorecon -F -R /var/lib/nms/modules.json
+    sudo restorecon -F -R /var/lib/nms/streaming
+    sudo restorecon -F -R /var/lib/nms
+    sudo restorecon -F -R /var/lib/nms/dqlite
+    sudo restorecon -F -R /var/run/nms
+    sudo restorecon -F -R /var/lib/nms/modules
+    sudo restorecon -F -R /var/log/nms
+
+For UI access, point your browser to the HTTPS port of this machine.
+----------------------------------------------------------------------
+Processing triggers for man-db (2.9.1-1) ...
+Processing triggers for rsyslog (8.2001.0-1ubuntu1.1) ...
+#
+
+
+
+# install nginx-oss
+sudo yum install wget
+wget https://nginx.org/packages/centos/7/x86_64/RPMS/nginx-1.14.2-1.el7_4.ngx.x86_64.rpm
+sudo rpm -Uvh nginx-1.14.2-1.el7_4.ngx.x86_64.rpm
+nginx -v
+
+[vagrant@nginx-oss ~]$ nginx -v
+nginx version: nginx/1.14.2
+[vagrant@nginx-oss ~]$
+
+sudo systemctl start nginx
+sudo systemctl enable nginx
+curl localhost
+
+# install nginx-plus
+
+
+###########
+ $ ./configure --prefix=PREFIX
+     $ make
+     $ make install
+     $ PREFIX/bin/apachectl start
+     

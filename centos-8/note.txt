@@ -1,0 +1,281 @@
+# test install nginx instance manger
+# centos/8
+
+# fix yum first
+https://techglimpse.com/failed-metadata-repo-appstream-centos-8/
+yum -y upgrade
+
+# Install ClickHouse
+https://clickhouse.com/#quick-start
+
+# preparing nginx cert
+mkdir /etc/ssl/nginx
+cp /tmp/nginx-instance-manager-eval.cer /etc/ssl/nginx/nginx-repo.crt
+cp /tmp/nginx-instance-manager-eval.key /etc/ssl/nginx/nginx-repo.key
+yum install -y ca-certificates
+yum install -y wget
+wget -P /etc/yum.repos.d https://cs.nginx.com/static/files/nms.repo
+
+
+# centos must install nginx oss manually
+yum install -y yum-utils
+
+vi /etc/yum.repos.d/nginx.repo
+[nginx-stable]
+name=nginx stable repo
+baseurl=http://nginx.org/packages/centos/$releasever/$basearch/
+gpgcheck=1
+enabled=1
+gpgkey=https://nginx.org/keys/nginx_signing.key
+module_hotfixes=true
+
+yum update
+
+# install nms
+yum install -y nms-instance-manager
+
+# logging nim install success.
+NGINX Management Suite package has been successfully installed.
+
+Please follow the next steps to start the software:
+    # Start Clickhouse database server
+    sudo systemctl start clickhouse-server
+
+    # Start NGINX web server
+    sudo systemctl start nginx
+
+    # If NGINX is already running, reload it
+    sudo service nginx reload
+
+    # to ensure the services starts whenever the system boots
+    sudo systemctl enable nms
+
+    sudo systemctl enable nms-core
+    sudo systemctl enable nms-dpm
+    sudo systemctl enable nms-ingestion
+    # Start NGINX Management Suite services
+    sudo systemctl start nms
+
+    # to load the included SELinux policy
+    sudo semodule -n -i /usr/share/selinux/packages/nms.pp
+    sudo /usr/sbin/load_policy
+    sudo restorecon -F -R /usr/bin/nms-core
+    sudo restorecon -F -R /usr/bin/nms-dpm
+    sudo restorecon -F -R /usr/bin/nms-ingestion
+    sudo restorecon -F -R /usr/lib/systemd/system/nms.service
+    sudo restorecon -F -R /usr/lib/systemd/system/nms-core.service
+    sudo restorecon -F -R /usr/lib/systemd/system/nms-dpm.service
+    sudo restorecon -F -R /usr/lib/systemd/system/nms-ingestion.service
+    sudo restorecon -F -R /var/lib/nms/modules/manager.json
+    sudo restorecon -F -R /var/lib/nms/modules.json
+    sudo restorecon -F -R /var/lib/nms/streaming
+    sudo restorecon -F -R /var/lib/nms
+    sudo restorecon -F -R /var/lib/nms/dqlite
+    sudo restorecon -F -R /var/run/nms
+    sudo restorecon -F -R /var/lib/nms/modules
+    sudo restorecon -F -R /var/log/nms
+
+    Admin username: admin
+
+    Admin password: xMji2VCvqCrhKxseLXu6L1TYdL7hP0
+
+Please change this password with your own as soon as possible:
+https://docs.nginx.com/nginx-instance-manager/admin-guide/authentication/
+
+For UI access, point your browser to the HTTPS port of this machine.
+----------------------------------------------------------------------
+
+
+#
+systemctl restart clickhouse-server
+systemctl restart nginx
+systemctl enable nginx
+
+systemctl enable nms
+systemctl enable nms-core
+systemctl enable nms-dpm
+systemctl enable nms-ingestion
+
+systemctl start nms
+
+# To manually update the CVE list
+curl -s http://hg.nginx.org/nginx.org/raw-file/tip/xml/en/security_advisories.xml > /usr/share/nms/cve.xml
+systemctl restart nms-dpm
+
+# update user pass
+/etc/nms/scripts/basic_passwords.sh <username> [password]
+/etc/nms/scripts/basic_passwords.sh admin P@ssw0rd
+
+https://<NGINX-INSTANCE-MANAGER-FQDN>/ui/
+upload NGINX-Instance-Manager.lic to gui
+
+# test install nginx-oss
+yum install -y epel-release
+yum install -y nginx
+nginx -v
+systemctl start nginx
+systemctl enable nginx
+
+# install nginx-agent
+curl -k https://192.168.55.96/install/nginx-agent | sudo sh
+systemctl start nginx-agent
+systemctl enable nginx-agent
+
+semodule -n -i /usr/share/selinux/packages/nginx_agent.pp
+/usr/sbin/load_policy
+
+semodule -n -i /usr/share/selinux/devel/include/contrib/nginx_agent.if
+/usr/sbin/load_policy
+
+semodule -n -i /usr/share/man/man8/nginx_agent_selinux.8.gz
+/usr/sbin/load_policy
+
+
+
+
+# test manage configure
+demo.conf
+server {
+    listen       81;
+    server_name  localhost;
+
+    location / {
+        return 200 'Hello World';
+        add_header Content-Type text/html;
+    }
+}
+
+
+
+
+
+##############################
+apt-get -y install apt-transport-https lsb-release ca-certificates
+wget https://nginx.org/keys/nginx_signing.key
+apt-key add nginx_signing.key
+printf "deb https://pkgs.nginx.com/nms/ubuntu `lsb_release -cs` nginx-plus\n" | tee /etc/apt/sources.list.d/nms.list
+wget -q -O /etc/apt/apt.conf.d/90pkgs-nginx https://cs.nginx.com/static/files/90pkgs-nginx
+apt-get update
+
+# install nginx instance manager
+apt-get install -y nms-instance-manager
+
+systemctl restart clickhouse-server
+systemctl restart nginx
+systemctl restart nms
+
+systemctl enable nms-core
+systemctl enable nms-dpm
+systemctl enable nms-ingestion
+systemctl enable nms
+
+dpkg -s nms-instance-manager
+
+# update user pass
+/etc/nms/scripts/basic_passwords.sh <username> [password]
+/etc/nms/scripts/basic_passwords.sh admin P@ssw0rd
+
+https://<NGINX-INSTANCE-MANAGER-FQDN>/ui/
+upload NGINX-Instance-Manager.lic to gui
+
+Next step Scan and Install manage agent later.
+https://docs.nginx.com/nginx-instance-manager/getting-started/installation/install-nginx-agent/
+
+# test manage configure
+demo.conf
+server {
+    listen       81;
+    server_name  localhost;
+
+    location / {
+        return 200 'Hello World';
+        add_header Content-Type text/html;
+    }
+}
+
+
+
+
+
+
+#######################################################
+# default admin but don't know pass
+# fix by reset the pass
+sh -c "echo -n 'admin:' > /etc/nms/nginx/.htpasswd"
+sh -c "openssl passwd -apr1 >> /etc/nms/nginx/.htpasswd"
+enter your password = P@ssw0rd
+cat /etc/nms/nginx/.htpasswd
+
+
+# note log install nginx instance manager
+NGINX Management Suite package has been successfully installed.
+
+Please follow the next steps to start the software:
+    # Start Clickhouse database server
+    systemctl start clickhouse-server
+
+    # Start NGINX web server
+    systemctl start nginx
+
+    # If NGINX is already running, reload it
+    service nginx reload
+
+    # to ensure the services starts whenever the system boots
+    systemctl enable nms
+
+    systemctl enable nms-core
+    systemctl enable nms-dpm
+    systemctl enable nms-ingestion
+    # Start NGINX Management Suite services
+    systemctl start nms
+
+    # to load the included SELinux policy
+    semodule -n -i /usr/share/selinux/packages/nms.pp
+    /usr/sbin/load_policy
+    restorecon -F -R /usr/bin/nms-core
+    restorecon -F -R /usr/bin/nms-dpm
+    restorecon -F -R /usr/bin/nms-ingestion
+    restorecon -F -R /usr/lib/systemd/system/nms.service
+    restorecon -F -R /usr/lib/systemd/system/nms-core.service
+    restorecon -F -R /usr/lib/systemd/system/nms-dpm.service
+    restorecon -F -R /usr/lib/systemd/system/nms-ingestion.service
+    restorecon -F -R /var/lib/nms/modules/manager.json
+    restorecon -F -R /var/lib/nms/modules.json
+    restorecon -F -R /var/lib/nms/streaming
+    restorecon -F -R /var/lib/nms
+    restorecon -F -R /var/lib/nms/dqlite
+    restorecon -F -R /var/run/nms
+    restorecon -F -R /var/lib/nms/modules
+    restorecon -F -R /var/log/nms
+
+For UI access, point your browser to the HTTPS port of this machine.
+----------------------------------------------------------------------
+Processing triggers for man-db (2.9.1-1) ...
+Processing triggers for rsyslog (8.2001.0-1ubuntu1.1) ...
+#
+
+
+
+# install nginx-oss
+yum install wget
+wget https://nginx.org/packages/centos/7/x86_64/RPMS/nginx-1.14.2-1.el7_4.ngx.x86_64.rpm
+rpm -Uvh nginx-1.14.2-1.el7_4.ngx.x86_64.rpm
+nginx -v
+
+[vagrant@nginx-oss ~]$ nginx -v
+nginx version: nginx/1.14.2
+[vagrant@nginx-oss ~]$
+
+systemctl start nginx
+systemctl enable nginx
+curl localhost
+
+# install nginx-plus
+
+
+###########
+ $ ./configure --prefix=PREFIX
+     $ make
+     $ make install
+     $ PREFIX/bin/apachectl start
+     

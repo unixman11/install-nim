@@ -1,0 +1,115 @@
+# test install nginx instance manger
+# centos/stream8
+
+sudo yum -y upgrade
+
+# Install ClickHouse
+https://clickhouse.com/#quick-start
+
+# preparing nginx cert
+sudo mkdir /etc/ssl/nginx
+sudo cp /tmp/nginx-instance-manager-eval.cer /etc/ssl/nginx/nginx-repo.crt
+sudo cp /tmp/nginx-instance-manager-eval.key /etc/ssl/nginx/nginx-repo.key
+sudo yum install ca-certificates -y
+sudo yum install wget -y
+sudo wget -P /etc/yum.repos.d https://cs.nginx.com/static/files/nms.repo
+
+# centos must install nginx oss manually for running nim
+sudo yum install -y yum-utils
+
+sudo vi /etc/yum.repos.d/nginx.repo
+[nginx-stable]
+name=nginx stable repo
+baseurl=http://nginx.org/packages/centos/$releasever/$basearch/
+gpgcheck=1
+enabled=1
+gpgkey=https://nginx.org/keys/nginx_signing.key
+module_hotfixes=true
+
+sudo yum update -y
+sudo yum install -y nginx
+sudo systemctl enable nginx
+nginx -v
+
+# install nms
+sudo yum install -y nms-instance-manager
+
+systemctl restart clickhouse-server
+systemctl restart nginx
+
+systemctl enable nms-core
+systemctl enable nms-dpm
+systemctl enable nms-ingestion
+systemctl enable nms
+systemctl start nms
+
+# update user pass
+/etc/nms/scripts/basic_passwords.sh <username> [password]
+/etc/nms/scripts/basic_passwords.sh admin P@ssw0rd
+
+https://<NGINX-INSTANCE-MANAGER-FQDN>/ui/
+upload NGINX-Instance-Manager.lic to gui
+
+semodule -n -i /usr/share/selinux/packages/nms.pp
+/usr/sbin/load_policy
+
+restorecon -F -R /usr/bin/nms-core
+restorecon -F -R /usr/bin/nms-dpm
+restorecon -F -R /usr/bin/nms-ingestion
+restorecon -F -R /usr/lib/systemd/system/nms.service
+restorecon -F -R /usr/lib/systemd/system/nms-core.service
+restorecon -F -R /usr/lib/systemd/system/nms-dpm.service
+restorecon -F -R /usr/lib/systemd/system/nms-ingestion.service
+restorecon -F -R /var/lib/nms/modules/manager.json
+restorecon -F -R /var/lib/nms/modules.json
+restorecon -F -R /var/lib/nms/streaming
+restorecon -F -R /var/lib/nms
+restorecon -F -R /var/lib/nms/dqlite
+restorecon -F -R /var/run/nms
+restorecon -F -R /var/lib/nms/modules
+restorecon -F -R /var/log/nms
+
+# test install nginx-oss
+sudo yum install -y epel-release
+sudo yum install -y nginx
+nginx -v
+sudo systemctl start nginx
+sudo systemctl enable nginx
+
+# install nginx-agent
+curl -k https://192.168.55.96/install/nginx-agent | sudo sh
+systemctl start nginx-agent
+systemctl enable nginx-agent
+
+semodule -n -i /usr/share/selinux/packages/nginx_agent.pp
+/usr/sbin/load_policy
+
+semodule -n -i /usr/share/selinux/devel/include/contrib/nginx_agent.if
+/usr/sbin/load_policy
+
+semodule -n -i /usr/share/man/man8/nginx_agent_selinux.8.gz
+/usr/sbin/load_policy
+
+# test manage configure
+conf.d/demo.conf
+server {
+    listen       81;
+    server_name  localhost;
+
+    location / {
+        return 200 'Hello World';
+        add_header Content-Type text/html;
+    }
+}
+
+# fix open non-standard port
+sudo yum install -y setroubleshoot-server selinux-policy-devel
+sudo semanage port -l
+observe "http_port_t"
+sudo semanage port -l | grep http_port_t
+
+sudo semanage port -a -t http_port_t -p tcp 82
+sudo semanage port -a -t http_port_t -p tcp 83
+
+# issue can't write file configure
+try...
